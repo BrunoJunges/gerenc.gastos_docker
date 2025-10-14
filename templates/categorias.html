@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="header-content">
+    <h1>Gerenciar Categorias</h1>
+    <button class="btn-primary" onclick="openAddModal()">Nova Categoria</button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome da Categoria</th>
+                    <th class="actions-header">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="categorias-tbody">
+                <!-- As linhas serão inseridas aqui via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal para Adicionar/Editar Categoria -->
+<div id="categoria-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <h4 id="modal-title"></h4>
+        <form id="categoria-form">
+            <input type="hidden" id="categoria-id" name="id">
+            <div class="form-field">
+                <label for="categoria-nome">Nome da Categoria</label>
+                <input type="text" id="categoria-nome" name="nome" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para Confirmar Exclusão -->
+<div id="delete-confirm-modal" class="modal">
+    <div class="modal-content">
+        <h4>Confirmar Exclusão</h4>
+        <p>Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+            <button type="button" class="btn-danger" id="confirm-delete-btn">Confirmar Exclusão</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    const API_CATEGORIAS_URL = "{{ url_for('listar_categorias') }}";
+    const modal = document.getElementById('categoria-modal');
+    const deleteModal = document.getElementById('delete-confirm-modal');
+    const form = document.getElementById('categoria-form');
+    const modalTitle = document.getElementById('modal-title');
+    const categoriaIdInput = document.getElementById('categoria-id');
+    const categoriaNomeInput = document.getElementById('categoria-nome');
+
+    // Função para carregar e renderizar as categorias
+    async function carregarCategorias() {
+        try {
+            const response = await fetch(API_CATEGORIAS_URL);
+            if (!response.ok) throw new Error('Falha ao carregar categorias.');
+            
+            const categorias = await response.json();
+            const tbody = document.getElementById('categorias-tbody');
+            tbody.innerHTML = ''; // Limpa a tabela
+
+            if (categorias.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">Nenhuma categoria cadastrada.</td></tr>';
+                return;
+            }
+
+            categorias.forEach(cat => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${cat.nome}</td>
+                    <td class="actions-cell">
+                        <button class="btn-edit" onclick="openEditModal(${cat.id}, '${cat.nome}')"></button>
+                        <button class="btn-delete" onclick="openDeleteModal(${cat.id})"></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            showFlashMessage(error.message, 'error');
+        }
+    }
+
+    // Funções de controle do Modal
+    function closeModal() { modal.style.display = 'none'; }
+    function closeDeleteModal() { deleteModal.style.display = 'none'; }
+
+    function openAddModal() {
+        form.reset();
+        modalTitle.textContent = 'Nova Categoria';
+        categoriaIdInput.value = '';
+        modal.style.display = 'block';
+        categoriaNomeInput.focus();
+    }
+
+    function openEditModal(id, nome) {
+        form.reset();
+        modalTitle.textContent = 'Editar Categoria';
+        categoriaIdInput.value = id;
+        categoriaNomeInput.value = nome;
+        modal.style.display = 'block';
+        categoriaNomeInput.focus();
+    }
+
+    function openDeleteModal(id) {
+        deleteModal.style.display = 'block';
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        // Clona e substitui o botão para remover event listeners antigos
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        newConfirmBtn.onclick = () => handleDelete(id);
+    }
+    
+    // Handler para submissão do formulário (Adicionar/Editar)
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const id = categoriaIdInput.value;
+        const nome = categoriaNomeInput.value;
+        const url = id ? `${API_CATEGORIAS_URL}/${id}` : API_CATEGORIAS_URL;
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome: nome })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.erro || 'Ocorreu um erro.');
+            }
+
+            showFlashMessage(`Categoria ${id ? 'atualizada' : 'criada'} com sucesso!`, 'success');
+            closeModal();
+            carregarCategorias();
+        } catch (error) {
+            showFlashMessage(error.message, 'error');
+        }
+    });
+
+    // Handler para exclusão
+    async function handleDelete(id) {
+        try {
+            const response = await fetch(`${API_CATEGORIAS_URL}/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.status === 204) {
+                showFlashMessage('Categoria excluída com sucesso!', 'success');
+            } else {
+                const result = await response.json();
+                throw new Error(result.erro || 'Falha ao excluir.');
+            }
+        } catch (error) {
+            showFlashMessage(error.message, 'error');
+        } finally {
+            closeDeleteModal();
+            carregarCategorias();
+        }
+    }
+
+    // Carrega as categorias quando a página é carregada
+    document.addEventListener('DOMContentLoaded', carregarCategorias);
+</script>
+{% endblock %}

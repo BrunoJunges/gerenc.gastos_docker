@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador Financeiro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="main-header">
+        <h1>Gerenciador Financeiro</h1>
+        {% if session.user_id %}
+            <div class="user-info">
+                <span>Olá, <strong>{{ session.username }}</strong>!</span>
+                <a href="{{ url_for('logout') }}" class="logout-button">Sair</a>
+            </div>
+        {% endif %}
+    </header>
+
+    <div id="flash-container"></div>
+
+    <div class="container">
+        {% if session.user_id %}
+            <nav class="sidebar" id="sidebar">
+                <h3>Navegação</h3>
+                <div id="sidebar-nav-links">
+                    <a href="{{ url_for('index') }}" class="nav-link active" id="link-dashboard">Dashboard</a>
+                    <a href="{{ url_for('categorias_page') }}" class="nav-link">Gerenciar Categorias</a>
+                </div>
+                <hr>
+                <div id="sidebar-filters">
+                    <h4>Filtro de Período</h4>
+                    <div id="month-filter-container">
+                        <!-- Links dos meses serão inseridos aqui pelo JS -->
+                    </div>
+                </div>
+            </nav>
+        {% endif %}
+
+        <main class="content {% if not session.user_id %}full-width{% endif %}">
+            {% if session.user_id %}
+                <button class="sidebar-toggle" id="sidebar-toggle">
+                    <span></span><span></span><span></span>
+                </button>
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    {% block modals %}{% endblock %}
+
+    <script>
+        // Funções globais
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleButton = document.getElementById('sidebar-toggle');
+            if (toggleButton) {
+                toggleButton.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
+            }
+        });
+        
+        function showFlashMessage(message, category = 'info') {
+            // ... (código da função sem alterações) ...
+        }
+
+        // Função para formatar moeda
+        function formatCurrency(value) {
+            return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+        
+        // --- LÓGICA DE FILTROS DA SIDEBAR ---
+        function renderMonthFilters() {
+            const container = document.getElementById('month-filter-container');
+            if (!container) return;
+
+            container.innerHTML = ''; // Limpa
+            const today = new Date();
+            const navMonths = [];
+
+            // Gera links para os últimos 4 meses
+            for (let i = 0; i < 4; i++) {
+                const targetDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const year = targetDate.getFullYear();
+                const month = targetDate.getMonth() + 1;
+                const monthName = targetDate.toLocaleDateString('pt-BR', { month: 'long' });
+
+                const uniqueId = `${year}-${month}`;
+                if (!navMonths.find(m => m.id === uniqueId)) {
+                    navMonths.push({
+                        id: uniqueId,
+                        ano: year,
+                        mes: month,
+                        nome: monthName.charAt(0).toUpperCase() + monthName.slice(1)
+                    });
+                }
+            }
+
+            navMonths.forEach(nav => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = `${nav.nome} / ${nav.ano}`;
+                a.className = 'nav-link filter-link';
+                a.dataset.ano = nav.ano;
+                a.dataset.mes = nav.mes;
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    // Esta função 'carregarDashboard' será definida em index.html
+                    if (window.carregarDashboard) {
+                        window.carregarDashboard(nav.ano, nav.mes);
+                        document.querySelectorAll('.filter-link').forEach(link => link.classList.remove('active'));
+                        a.classList.add('active');
+                        document.getElementById('link-dashboard').classList.add('active');
+                    }
+                };
+                container.appendChild(a);
+            });
+        }
+
+        // Se o container de filtros existir, renderiza os filtros
+        if (document.getElementById('month-filter-container')) {
+            renderMonthFilters();
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

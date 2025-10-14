@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="header-content">
+    <h1 id="dashboard-title">Dashboard</h1>
+    <button class="btn-primary" onclick="openGastoModal()">Adicionar Gasto</button>
+</div>
+
+<!-- Card de Resumo -->
+<div class="summary-card">
+    <div class="total-spent-block">
+        <h2>Total Gasto no Período</h2>
+        <p id="total-gasto-valor">R$ 0,00</p>
+    </div>
+    <div class="category-chart-container">
+        <h3>Gastos por Categoria</h3>
+        <div class="chart-bars" id="chart-bars-container">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Gastos -->
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th class="valor-header">Valor (BRL)</th>
+                    <th class="actions-header">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="gastos-tbody">
+                <tr><td colspan="5" class="text-center"><div class="loading-spinner"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% if session.user_id %}
+<!-- Modal para Adicionar/Editar Gasto -->
+<div id="gasto-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeGastoModal()">&times;</span>
+        <h4 id="gasto-modal-title"></h4>
+        <form id="gasto-form">
+            <input type="hidden" id="gasto-id" name="id">
+            <div class="add-form">
+                <div class="form-field"><label for="gasto-descricao">Descrição:</label><input type="text" id="gasto-descricao" name="descricao" required></div>
+                <div class="form-group-inline">
+                    <div class="form-field grow"><label for="gasto-valor">Valor:</label><input type="number" id="gasto-valor" name="valor_original" step="0.01" required></div>
+                    <div class="form-field no-grow"><label for="gasto-moeda">Moeda:</label><select name="moeda_original" id="gasto-moeda" required></select></div>
+                </div>
+                <div class="form-field">
+                    <label for="gasto-categoria">Categoria:</label>
+                    <select name="categoria_id" id="gasto-categoria" required onchange="toggleGastoParcelasField()"></select>
+                </div>
+                <div class="form-field" id="gasto-parcelas-field" style="display: none;">
+                    <label>Parcela:</label>
+                    <div class="parcelas-group">
+                        <select name="parcela_atual" id="gasto-parcela-atual"></select>
+                        <span class="parcela-separator">/</span>
+                        <select name="parcela_total" id="gasto-parcela-total" onchange="updateGastoParcelaAtualOptions()">
+                            {% for i in range(1, 61) %}<option value="{{ i }}">{{ "%02d"|format(i) }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field"><label for="gasto-data">Data:</label><input type="date" id="gasto-data" required></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeGastoModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Modal de Confirmação de Exclusão -->
+<div id="delete-gasto-modal" class="modal">
+    <div class="modal-content">
+        <h4>Confirmar Exclusão</h4>
+        <p>Tem certeza que deseja excluir este gasto permanentemente?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeDeleteGastoModal()">Cancelar</button>
+            <button type="button" class="btn-danger" id="confirm-delete-gasto-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // --- ESTADO DA APLICAÇÃO E CONSTANTES ---
+    let currentAno = new Date().getFullYear();
+    let currentMes = new Date().getMonth() + 1;
+
+    const GASTOS_API = "{{ url_for('listar_gastos') }}";
+    const SUMMARY_API = "{{ url_for('get_summary') }}";
+    const CATEGORIAS_API = "{{ url_for('listar_categorias') }}";
+    const MOEDAS = {{ moedas|tojson }};
+    const CATEGORIA_ABREVIACOES = {
+        "Alimentação": "Alim", "Locomoção": "Locom", "Casa": "Casa", "Lazer": "Lazer", "Despesas inesperadas": "Desp.In",
+        "Parcelas/Crédito": "Parc.", "Outros/Indefinível": "Outro"
+    };
+
+    // --- ELEMENTOS DO DOM ---
+    const gastoModal = document.getElementById('gasto-modal');
+    const gastoForm = document.getElementById('gasto-form');
+    const deleteGastoModal = document.getElementById('delete-gasto-modal');
+
+    // --- FUNÇÕES DE RENDERIZAÇÃO ---
+
+    function renderizarTabela(gastos) {
+        const tbody = document.getElementById('gastos-tbody');
+        tbody.innerHTML = '';
+        if (gastos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum gasto encontrado para este período.</td></tr>';
+            return;
+        }
+        gastos.forEach(gasto => {
+            const tr = document.createElement('tr');
+            tr.dataset.gastoId = gasto.id;
+            const dataFormatada = new Date(gasto.data + 'T00:00:00').toLocaleDateString('pt-BR');
+            let categoriaDisplay = gasto.categoria_nome;
+            if (gasto.info_parcela) {
+                categoriaDisplay += ` <span class="parcela-info">${gasto.info_parcela}</span>`;
+            }
+            let valorDisplay = formatCurrency(gasto.valor_brl);
+            if (gasto.moeda_original !== 'BRL') {
+                valorDisplay += `<span class="original-currency">(${gasto.moeda_original} ${gasto.valor_original.toFixed(2)})</span>`;
+            }
+            tr.innerHTML = `
+                <td>${dataFormatada}</td>
+                <td>${gasto.descricao}</td>
+                <td>${categoriaDisplay}</td>
+                <td class="valor">${valorDisplay}</td>
+                <td class="actions-cell">
+                    <button class="btn-edit" onclick="openGastoModal(${gasto.id})"></button>
+                    <button class="btn-delete" onclick="confirmDeleteGasto(${gasto.id})"></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderizarGrafico(summary) {
+        const container = document.getElementById('chart-bars-container');
+        container.innerHTML = '';
+        if (!summary.grafico_data || summary.grafico_data.length === 0) {
+            container.textContent = 'Sem dados para o gráfico.';
+            return;
+        }
+        summary.grafico_data.forEach(item => {
+            const chartItem = document.createElement('div');
+            chartItem.className = 'chart-item';
+            chartItem.style.setProperty('--percentage', `${item.percentual}%`);
+            chartItem.innerHTML = `
+                <div class="bar-value-label">${formatCurrency(item.valor_total)}</div>
+                <div class="chart-bar"></div>
+                <div class="bar-label">${item.categoria_abrev}</div>
+            `;
+            container.appendChild(chartItem);
+        });
+    }
+
+    // --- LÓGICA PRINCIPAL DO DASHBOARD ---
+
+    async function carregarDashboard(ano, mes) {
+        currentAno = ano;
+        currentMes = mes;
+        const dashboardTitle = document.getElementById('dashboard-title');
+        dashboardTitle.textContent = `Dashboard de ${new Date(ano, mes - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+        const params = new URLSearchParams({ ano, mes });
+        document.getElementById('gastos-tbody').innerHTML = '<tr><td colspan="5" class="text-center"><div class="loading-spinner"></div></td></tr>';
+        document.getElementById('chart-bars-container').innerHTML = '<div class="loading-spinner"></div>';
+        try {
+            const [gastosRes, summaryRes] = await Promise.all([
+                fetch(`${GASTOS_API}?${params}`),
+                fetch(`${SUMMARY_API}?${params}`)
+            ]);
+            if (!gastosRes.ok || !summaryRes.ok) throw new Error('Falha ao carregar dados do dashboard.');
+            const gastos = await gastosRes.json();
+            const summary = await summaryRes.json();
+            document.getElementById('total-gasto-valor').textContent = formatCurrency(summary.total_gasto);
+            renderizarTabela(gastos);
+            renderizarGrafico(summary);
+        } catch (error) {
+            showFlashMessage(error.message, 'error');
+        }
+    }
+
+    // --- LÓGICA DO MODAL DE GASTOS ---
+
+    async function openGastoModal(id = null) {
+        gastoForm.reset();
+        const modalTitle = document.getElementById('gasto-modal-title');
+        const idInput = document.getElementById('gasto-id');
+        await preencherSelectsModal();
+        if (id) {
+            modalTitle.textContent = 'Editar Gasto';
+            idInput.value = id;
+            try {
+                const response = await fetch(`${GASTOS_API}/${id}`);
+                const gasto = await response.json();
+                if (!response.ok) throw new Error(gasto.erro);
+                document.getElementById('gasto-descricao').value = gasto.descricao;
+                document.getElementById('gasto-valor').value = gasto.valor_original;
+                document.getElementById('gasto-moeda').value = gasto.moeda_original;
+                document.getElementById('gasto-categoria').value = gasto.categoria_id;
+                document.getElementById('gasto-data').value = gasto.data;
+                toggleGastoParcelasField();
+                if (gasto.info_parcela) {
+                    const [atual, total] = gasto.info_parcela.split('/');
+                    document.getElementById('gasto-parcela-total').value = parseInt(total, 10);
+                    updateGastoParcelaAtualOptions();
+                    document.getElementById('gasto-parcela-atual').value = parseInt(atual, 10);
+                }
+            } catch (error) {
+                showFlashMessage(error.message, 'error');
+                return;
+            }
+        } else {
+            modalTitle.textContent = 'Adicionar Novo Gasto';
+            idInput.value = '';
+            document.getElementById('gasto-data').valueAsDate = new Date();
+            toggleGastoParcelasField();
+        }
+        gastoModal.style.display = 'block';
+    }
+
+    function closeGastoModal() { if (gastoModal) gastoModal.style.display = 'none'; }
+
+    async function preencherSelectsModal() {
+        const moedaSelect = document.getElementById('gasto-moeda');
+        moedaSelect.innerHTML = MOEDAS.map(m => `<option value="${m}">${m}</option>`).join('');
+        moedaSelect.value = 'BRL';
+        const categoriaSelect = document.getElementById('gasto-categoria');
+        try {
+            const response = await fetch(CATEGORIAS_API);
+            const categorias = await response.json();
+            categoriaSelect.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            categoriaSelect.innerHTML += categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+        } catch (error) {
+            showFlashMessage('Erro ao carregar categorias.', 'error');
+        }
+    }
+    
+    function toggleGastoParcelasField() {
+        const catSelect = document.getElementById('gasto-categoria');
+        const parcelasField = document.getElementById('gasto-parcelas-field');
+        const selectedOptionText = catSelect.options[catSelect.selectedIndex]?.text;
+        const isParcelas = selectedOptionText === 'Parcelas/Crédito';
+        parcelasField.style.display = isParcelas ? 'block' : 'none';
+        if (isParcelas) {
+            updateGastoParcelaAtualOptions();
+        }
+    }
+    
+    function updateGastoParcelaAtualOptions() {
+        const totalSelect = document.getElementById('gasto-parcela-total');
+        const atualSelect = document.getElementById('gasto-parcela-atual');
+        const maxParcelas = parseInt(totalSelect.value, 10);
+        const valorAnterior = parseInt(atualSelect.value, 10);
+        atualSelect.innerHTML = '';
+        for (let i = 1; i <= maxParcelas; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i.toString().padStart(2, '0');
+            atualSelect.appendChild(option);
+        }
+        if (valorAnterior && valorAnterior <= maxParcelas) {
+            atualSelect.value = valorAnterior;
+        }
+    }
+
+    gastoForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const id = document.getElementById('gasto-id').value;
+        const url = id ? `${GASTOS_API}/${id}` : GASTOS_API;
+        const method = id ? 'PUT' : 'POST';
+        const data = {
+            descricao: document.getElementById('gasto-descricao').value,
+            valor_original: parseFloat(document.getElementById('gasto-valor').value),
+            moeda_original: document.getElementById('gasto-moeda').value,
+            categoria_id: parseInt(document.getElementById('gasto-categoria').value),
+            data: document.getElementById('gasto-data').value,
+        };
+        const catSelectText = document.getElementById('gasto-categoria').options[document.getElementById('gasto-categoria').selectedIndex].text;
+        if (catSelectText === 'Parcelas/Crédito') {
+            data.parcela_atual = document.getElementById('gasto-parcela-atual').value;
+            data.parcela_total = document.getElementById('gasto-parcela-total').value;
+        }
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+            showFlashMessage(`Gasto ${id ? 'atualizado' : 'adicionado'} com sucesso!`, 'success');
+            closeGastoModal();
+            carregarDashboard(currentAno, currentMes);
+        } catch(error) {
+            showFlashMessage(error.message, 'error');
+        }
+    });
+
+    function confirmDeleteGasto(id) {
+        if(deleteGastoModal) {
+            deleteGastoModal.style.display = 'block';
+            const confirmBtn = document.getElementById('confirm-delete-gasto-btn');
+            confirmBtn.onclick = () => handleDeleteGasto(id);
+        }
+    }
+    function closeDeleteGastoModal() { if(deleteGastoModal) deleteGastoModal.style.display = 'none'; }
+    async function handleDeleteGasto(id) {
+        try {
+            const response = await fetch(`${GASTOS_API}/${id}`, { method: 'DELETE' });
+            if (response.status === 204) {
+                showFlashMessage('Gasto excluído com sucesso!', 'success');
+            } else {
+                const result = await response.json();
+                throw new Error(result.erro || 'Falha ao excluir.');
+            }
+        } catch (error) {
+            showFlashMessage(error.message, 'error');
+        } finally {
+            closeDeleteGastoModal();
+            carregarDashboard(currentAno, currentMes);
+        }
+    }
+
+    // --- INICIALIZAÇÃO ---
+    document.addEventListener('DOMContentLoaded', () => {
+        carregarDashboard(currentAno, currentMes);
+        // Sobrescreve o onclick global para usar os filtros do dashboard
+        document.querySelectorAll('.filter-link').forEach(link => {
+            link.onclick = (e) => {
+                e.preventDefault();
+                const ano = e.target.dataset.ano;
+                const mes = e.target.dataset.mes;
+                carregarDashboard(parseInt(ano), parseInt(mes));
+                document.querySelectorAll('.filter-link').forEach(l => l.classList.remove('active'));
+                e.target.classList.add('active');
+            };
+        });
+    });
+    // Torna a função acessível globalmente para o onclick no HTML
+    window.openGastoModal = openGastoModal;
+
+</script>
+{% endblock %}

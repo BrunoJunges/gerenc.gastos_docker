@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Login</h2>
+    <form id="login-form">
+        <div class="form-field">
+            <label for="username">Usuário</label>
+            <input name="username" id="username" required>
+        </div>
+        <div class="form-field">
+            <label for="password">Senha</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <button type="submit" class="btn-primary">Entrar</button>
+    </form>
+    <p>Não tem uma conta? <a href="{{ url_for('register_page') }}">Cadastre-se</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const data = {
+            username: this.username.value,
+            password: this.password.value
+        };
+
+        const response = await fetch("{{ url_for('login_logic') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            window.location.href = "{{ url_for('index') }}";
+        } else {
+            showFlashMessage(result.message, 'error');
+        }
+    });
+</script>
+{% endblock %}

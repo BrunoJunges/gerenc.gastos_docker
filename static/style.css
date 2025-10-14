@@ -1,0 +1,286 @@
+/* Reset Básico e Fontes */
+:root {
+    --primary-color: #005f73;
+    --secondary-color: #0a9396;
+    --accent-color: #ee9b00;
+    --danger-color: #ae2012;
+    --light-bg-color: #f8f9fa;
+    --text-color: #343a40;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    background-color: var(--light-bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    display: flex;
+}
+
+/* Header Principal */
+.main-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1010;
+}
+.main-header h1 { margin: 0; font-size: 1.5em; }
+.user-info { display: flex; align-items: center; gap: 15px; }
+.logout-button {
+    color: var(--danger-color);
+    background-color: white;
+    font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+}
+.logout-button:hover { background-color: #f1f1f1; transform: translateY(-1px); }
+
+/* Mensagens Flash */
+#flash-container { position: fixed; top: 60px; left: 0; width: 100%; z-index: 1100; }
+.flash { padding: 1rem; text-align: center; font-weight: 500; border-bottom: 1px solid rgba(0,0,0,0.1); opacity: 1; transition: opacity 0.5s ease-out; }
+.flash.success { background-color: #d1e7dd; color: #0f5132; }
+.flash.error { background-color: #f8d7da; color: #842029; }
+.flash.info { background-color: #cff4fc; color: #055160; }
+
+
+/* Barra Lateral */
+.sidebar {
+    width: 250px;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+    height: calc(100vh - 60px); /* Altura da tela menos o header */
+    position: sticky;
+    top: 60px;
+}
+.sidebar h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 0; }
+.sidebar a.nav-link {
+    text-decoration: none;
+    color: var(--secondary-color);
+    padding: 10px 5px;
+    display: block;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+.sidebar a.nav-link:hover { background-color: var(--light-bg-color); }
+.sidebar hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+
+/* Conteúdo Principal */
+.content {
+    flex-grow: 1;
+    padding: 30px;
+    width: 100%;
+}
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.header-content h1 { margin: 0; }
+.content.full-width {
+    padding: 0;
+    max-width: 100%;
+}
+
+/* Botões */
+.btn-primary {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover { background-color: var(--primary-color); }
+
+/* Páginas de Autenticação */
+.auth-container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 20px 30px 30px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.auth-container h2 { text-align: center; color: var(--primary-color); margin-top: 0; margin-bottom: 25px; }
+.auth-container .form-field { margin-bottom: 20px; }
+.auth-container label { display: block; margin-bottom: 5px; font-weight: bold; }
+.auth-container input { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 4px; font-size: 1em; }
+.auth-container p { text-align: center; margin-top: 20px; }
+
+/* Responsividade */
+.sidebar-toggle { display: none; }
+@media (max-width: 992px) {
+    .sidebar-toggle {
+        display: block;
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 1020;
+        background: var(--primary-color);
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .sidebar-toggle span { display: block; width: 22px; height: 3px; background-color: white; margin: 4px 0; }
+    
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        padding-top: 80px;
+    }
+    
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+}
+/* --- ESTILOS FASE 2: TABELAS E MODAIS GENÉRICOS --- */
+
+.card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-top: 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table thead th {
+    background-color: var(--light-bg-color);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table .actions-header {
+    text-align: right;
+}
+
+.data-table .actions-cell {
+    text-align: right;
+}
+
+/* Botões de Ação na Tabela */
+.btn-edit, .btn-delete {
+    border: none;
+    cursor: pointer;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    opacity: 0.7;
+}
+.btn-edit:hover, .btn-delete:hover {
+    opacity: 1;
+    background-color: var(--light-bg-color);
+}
+
+.btn-edit {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffb703'%3E%3Cpath d='M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z'/%3E%3C/svg%3E");
+}
+
+.btn-delete {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ae2012'%3E%3Cpath d='M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z'/%3E%3C/svg%3E");
+}
+
+/* Modal Genérico */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px 30px 30px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+}
+.close-button {
+    color: #aaa;
+    position: absolute;
+    top: 10px; right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.modal-content h4 { margin-top: 0; color: var(--primary-color); }
+.modal-actions {
+    margin-top: 20px;
+    text-align: right;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+}
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+}
