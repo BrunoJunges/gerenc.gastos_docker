@@ -6,7 +6,6 @@
     <button class="btn-primary" onclick="openGastoModal()">Adicionar Gasto</button>
 </div>
 
-<!-- Card de Resumo -->
 <div class="summary-card">
     <div class="total-spent-block">
         <h2>Total Gasto no Período</h2>
@@ -20,7 +19,6 @@
     </div>
 </div>
 
-<!-- Tabela de Gastos -->
 <div class="card">
     <div class="card-body">
         <table class="data-table">
@@ -42,72 +40,59 @@
 {% endblock %}
 
 {% block modals %}
-{% if session.user_id %}
-<!-- Modal para Adicionar/Editar Gasto -->
-<div id="gasto-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-button" onclick="closeGastoModal()">&times;</span>
-        <h4 id="gasto-modal-title"></h4>
-        <form id="gasto-form">
-            <input type="hidden" id="gasto-id" name="id">
-            <div class="add-form">
-                <div class="form-field"><label for="gasto-descricao">Descrição:</label><input type="text" id="gasto-descricao" name="descricao" required></div>
-                <div class="form-group-inline">
-                    <div class="form-field grow"><label for="gasto-valor">Valor:</label><input type="number" id="gasto-valor" name="valor_original" step="0.01" required></div>
-                    <div class="form-field no-grow"><label for="gasto-moeda">Moeda:</label><select name="moeda_original" id="gasto-moeda" required></select></div>
-                </div>
-                <div class="form-field">
-                    <label for="gasto-categoria">Categoria:</label>
-                    <select name="categoria_id" id="gasto-categoria" required onchange="toggleGastoParcelasField()"></select>
-                </div>
-                <div class="form-field" id="gasto-parcelas-field" style="display: none;">
-                    <label>Parcela:</label>
-                    <div class="parcelas-group">
-                        <select name="parcela_atual" id="gasto-parcela-atual"></select>
-                        <span class="parcela-separator">/</span>
-                        <select name="parcela_total" id="gasto-parcela-total" onchange="updateGastoParcelaAtualOptions()">
-                            {% for i in range(1, 61) %}<option value="{{ i }}">{{ "%02d"|format(i) }}</option>{% endfor %}
-                        </select>
+    {% if session.user_id %}
+    <div id="gasto-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeGastoModal()">&times;</span>
+            <h4 id="gasto-modal-title"></h4>
+            <form id="gasto-form">
+                <input type="hidden" id="gasto-id" name="id">
+                <div class="add-form">
+                    <div class="form-field"><label for="gasto-descricao">Descrição:</label><input type="text" id="gasto-descricao" name="descricao" required></div>
+                    <div class="form-group-inline">
+                        <div class="form-field grow"><label for="gasto-valor">Valor:</label><input type="number" id="gasto-valor" name="valor_original" step="0.01" required></div>
+                        <div class="form-field no-grow"><label for="gasto-moeda">Moeda:</label><select name="moeda_original" id="gasto-moeda" required></select></div>
+                    </div>
+                    <div class="form-field">
+                        <label for="gasto-categoria">Categoria:</label>
+                        <select name="categoria_id" id="gasto-categoria" required onchange="toggleGastoParcelasField()"></select>
+                    </div>
+                    <div class="form-field" id="gasto-parcelas-field" style="display: none;">
+                        <label>Parcela:</label>
+                        <div class="parcelas-group">
+                            <select name="parcela_atual" id="gasto-parcela-atual"></select>
+                            <span class="parcela-separator">/</span>
+                            <select name="parcela_total" id="gasto-parcela-total" onchange="updateGastoParcelaAtualOptions()"></select>
+                        </div>
+                    </div>
+                    <div class="form-field"><label for="gasto-data">Data:</label><input type="date" id="gasto-data" required></div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeGastoModal()">Cancelar</button>
+                        <button type="submit" class="btn-primary">Salvar</button>
                     </div>
                 </div>
-                <div class="form-field"><label for="gasto-data">Data:</label><input type="date" id="gasto-data" required></div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeGastoModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-<!-- Modal de Confirmação de Exclusão -->
-<div id="delete-gasto-modal" class="modal">
-    <div class="modal-content">
-        <h4>Confirmar Exclusão</h4>
-        <p>Tem certeza que deseja excluir este gasto permanentemente?</p>
-        <div class="modal-actions">
-            <button type="button" class="btn-secondary" onclick="closeDeleteGastoModal()">Cancelar</button>
-            <button type="button" class="btn-danger" id="confirm-delete-gasto-btn">Confirmar</button>
+            </form>
         </div>
     </div>
-</div>
-{% endif %}
+    <div id="delete-gasto-modal" class="modal">
+        <div class="modal-content">
+            <h4>Confirmar Exclusão</h4>
+            <p>Tem certeza que deseja excluir este gasto permanentemente?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeDeleteGastoModal()">Cancelar</button>
+                <button type="button" class="btn-danger" id="confirm-delete-gasto-btn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 {% endblock %}
-
 
 {% block scripts %}
 <script>
     // --- ESTADO DA APLICAÇÃO E CONSTANTES ---
     let currentAno = new Date().getFullYear();
     let currentMes = new Date().getMonth() + 1;
-
-    const GASTOS_API = "{{ url_for('listar_gastos') }}";
-    const SUMMARY_API = "{{ url_for('get_summary') }}";
-    const CATEGORIAS_API = "{{ url_for('listar_categorias') }}";
     const MOEDAS = {{ moedas|tojson }};
-    const CATEGORIA_ABREVIACOES = {
-        "Alimentação": "Alim", "Locomoção": "Locom", "Casa": "Casa", "Lazer": "Lazer", "Despesas inesperadas": "Desp.In",
-        "Parcelas/Crédito": "Parc.", "Outros/Indefinível": "Outro"
-    };
 
     // --- ELEMENTOS DO DOM ---
     const gastoModal = document.getElementById('gasto-modal');
@@ -115,7 +100,6 @@
     const deleteGastoModal = document.getElementById('delete-gasto-modal');
 
     // --- FUNÇÕES DE RENDERIZAÇÃO ---
-
     function renderizarTabela(gastos) {
         const tbody = document.getElementById('gastos-tbody');
         tbody.innerHTML = '';
@@ -133,7 +117,7 @@
             }
             let valorDisplay = formatCurrency(gasto.valor_brl);
             if (gasto.moeda_original !== 'BRL') {
-                valorDisplay += `<span class="original-currency">(${gasto.moeda_original} ${gasto.valor_original.toFixed(2)})</span>`;
+                valorDisplay += `<span class="original-currency">(${gasto.moeda_original} ${parseFloat(gasto.valor_original).toFixed(2)})</span>`;
             }
             tr.innerHTML = `
                 <td>${dataFormatada}</td>
@@ -153,7 +137,7 @@
         const container = document.getElementById('chart-bars-container');
         container.innerHTML = '';
         if (!summary.grafico_data || summary.grafico_data.length === 0) {
-            container.textContent = 'Sem dados para o gráfico.';
+            container.innerHTML = '<p class="text-center">Sem dados para exibir no gráfico.</p>';
             return;
         }
         summary.grafico_data.forEach(item => {
@@ -170,23 +154,28 @@
     }
 
     // --- LÓGICA PRINCIPAL DO DASHBOARD ---
-
     async function carregarDashboard(ano, mes) {
         currentAno = ano;
         currentMes = mes;
         const dashboardTitle = document.getElementById('dashboard-title');
-        dashboardTitle.textContent = `Dashboard de ${new Date(ano, mes - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+        const monthName = new Date(ano, mes - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        dashboardTitle.textContent = `Dashboard de ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`;
+        
         const params = new URLSearchParams({ ano, mes });
         document.getElementById('gastos-tbody').innerHTML = '<tr><td colspan="5" class="text-center"><div class="loading-spinner"></div></td></tr>';
         document.getElementById('chart-bars-container').innerHTML = '<div class="loading-spinner"></div>';
         try {
             const [gastosRes, summaryRes] = await Promise.all([
-                fetch(`${GASTOS_API}?${params}`),
-                fetch(`${SUMMARY_API}?${params}`)
+                fetch(`{{ url_for('listar_gastos') }}?${params}`),
+                fetch(`{{ url_for('get_summary') }}?${params}`)
             ]);
-            if (!gastosRes.ok || !summaryRes.ok) throw new Error('Falha ao carregar dados do dashboard.');
+
+            if (!gastosRes.ok) throw new Error('Falha ao carregar lista de gastos.');
+            if (!summaryRes.ok) throw new Error('Falha ao carregar sumário de gastos.');
+
             const gastos = await gastosRes.json();
             const summary = await summaryRes.json();
+            
             document.getElementById('total-gasto-valor').textContent = formatCurrency(summary.total_gasto);
             renderizarTabela(gastos);
             renderizarGrafico(summary);
@@ -196,9 +185,9 @@
     }
 
     // --- LÓGICA DO MODAL DE GASTOS ---
-
     async function openGastoModal(id = null) {
         gastoForm.reset();
+        document.getElementById('gasto-parcelas-field').style.display = 'none';
         const modalTitle = document.getElementById('gasto-modal-title');
         const idInput = document.getElementById('gasto-id');
         await preencherSelectsModal();
@@ -206,7 +195,7 @@
             modalTitle.textContent = 'Editar Gasto';
             idInput.value = id;
             try {
-                const response = await fetch(`${GASTOS_API}/${id}`);
+                const response = await fetch(`{{ url_for('obter_gasto', id=0) }}`.replace('0', id));
                 const gasto = await response.json();
                 if (!response.ok) throw new Error(gasto.erro);
                 document.getElementById('gasto-descricao').value = gasto.descricao;
@@ -242,7 +231,7 @@
         moedaSelect.value = 'BRL';
         const categoriaSelect = document.getElementById('gasto-categoria');
         try {
-            const response = await fetch(CATEGORIAS_API);
+            const response = await fetch("{{ url_for('listar_categorias') }}");
             const categorias = await response.json();
             categoriaSelect.innerHTML = '<option value="" disabled selected>Selecione...</option>';
             categoriaSelect.innerHTML += categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
@@ -258,6 +247,14 @@
         const isParcelas = selectedOptionText === 'Parcelas/Crédito';
         parcelasField.style.display = isParcelas ? 'block' : 'none';
         if (isParcelas) {
+            if (document.getElementById('gasto-parcela-total').options.length === 0) {
+                 for (let i = 1; i <= 60; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i.toString().padStart(2, '0');
+                    document.getElementById('gasto-parcela-total').appendChild(option);
+                }
+            }
             updateGastoParcelaAtualOptions();
         }
     }
@@ -282,7 +279,7 @@
     gastoForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const id = document.getElementById('gasto-id').value;
-        const url = id ? `${GASTOS_API}/${id}` : GASTOS_API;
+        const url = id ? `{{ url_for('atualizar_gasto', id=0) }}`.replace('0', id) : "{{ url_for('criar_gasto') }}";
         const method = id ? 'PUT' : 'POST';
         const data = {
             descricao: document.getElementById('gasto-descricao').value,
@@ -322,7 +319,7 @@
     function closeDeleteGastoModal() { if(deleteGastoModal) deleteGastoModal.style.display = 'none'; }
     async function handleDeleteGasto(id) {
         try {
-            const response = await fetch(`${GASTOS_API}/${id}`, { method: 'DELETE' });
+            const response = await fetch(`{{ url_for('deletar_gasto', id=0) }}`.replace('0', id), { method: 'DELETE' });
             if (response.status === 204) {
                 showFlashMessage('Gasto excluído com sucesso!', 'success');
             } else {
@@ -337,10 +334,8 @@
         }
     }
 
-    // --- INICIALIZAÇÃO ---
     document.addEventListener('DOMContentLoaded', () => {
         carregarDashboard(currentAno, currentMes);
-        // Sobrescreve o onclick global para usar os filtros do dashboard
         document.querySelectorAll('.filter-link').forEach(link => {
             link.onclick = (e) => {
                 e.preventDefault();
@@ -352,8 +347,7 @@
             };
         });
     });
-    // Torna a função acessível globalmente para o onclick no HTML
+    
     window.openGastoModal = openGastoModal;
-
 </script>
 {% endblock %}
