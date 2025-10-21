@@ -7,7 +7,6 @@ services:
     ports:
       - "5001:8000"
     volumes:
-      - ./instance:/app/instance  
+      - ./instance:/app/instance
     env_file:
       - .env
-volumes:
