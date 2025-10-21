@@ -3,9 +3,17 @@ import os
 from werkzeug.security import generate_password_hash
 
 print("--- EXECUTANDO SCRIPT DE INICIALIZAÇÃO DO BANCO DE DADOS (ARQUITETURA FINAL) ---")
-DB_FILE = 'finance.db'
 
-# Apaga o banco de dados antigo se ele existir, para garantir um recomeço limpo
+# Define o caminho correto para a pasta e o arquivo do banco de dados
+DB_FOLDER = 'instance'
+DB_FILE = os.path.join(DB_FOLDER, 'finance.db')
+
+# Garante que a pasta 'instance' exista
+if not os.path.exists(DB_FOLDER):
+    os.makedirs(DB_FOLDER)
+    print(f"Pasta '{DB_FOLDER}' criada.")
+
+# Apaga o banco de dados antigo se ele existir para garantir um recomeço limpo
 if os.path.exists(DB_FILE):
     os.remove(DB_FILE)
     print(f"Banco de dados antigo '{DB_FILE}' removido.")
@@ -25,7 +33,7 @@ try:
     ''')
     print("Tabela 'users' criada.")
 
-    # Tabela 2: Categorias (com vínculo ao usuário)
+    # Tabela 2: Categorias
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS categorias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +45,7 @@ try:
     ''')
     print("Tabela 'categorias' criada.")
 
-    # Tabela 3: Gastos (com vínculo ao usuário e à categoria)
+    # Tabela 3: Gastos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS gastos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,13 +63,13 @@ try:
     ''')
     print("Tabela 'gastos' criada.")
 
-    # Inserção de um usuário padrão para facilitar testes
+    # Inserção de um usuário padrão
     default_user = 'bruno'
     default_pass = '123'
     password_hash = generate_password_hash(default_pass)
     cursor.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (default_user, password_hash))
     user_id = cursor.lastrowid
-    print(f"Usuário padrão '{default_user}' criado com sucesso.")
+    print(f"Usuário padrão '{default_user}' criado.")
     
     # Inserção de categorias padrão para o usuário padrão
     default_categorias = ["Alimentação", "Locomoção", "Casa", "Lazer", "Despesas inesperadas", "Parcelas/Crédito", "Outros/Indefinível"]
@@ -75,7 +83,7 @@ try:
 except Exception as e:
     print(f"--- ERRO no script de inicialização: {e} ---")
     if conn:
-        conn.rollback() # Desfaz qualquer mudança parcial
+        conn.rollback()
     exit(1)
 finally:
     if conn:
