@@ -3,10 +3,11 @@ version: '3.8'
 services:
   web:
     build: .
+    container_name: gerenciador_financeiro_web
     ports:
-      - "5001:5001"
+      - "5001:8000"
     volumes:
-      - .:/app
+      - ./instance:/app/instance  
     env_file:
       - .env
-    command: python app.py
+volumes:
