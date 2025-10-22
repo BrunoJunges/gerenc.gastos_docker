@@ -72,7 +72,7 @@ def categorias_page():
 
 # --- ROTAS DE LÓGICA (AUTH) ---
 
-@app.route('/auth/login', methods=['POST'])
+@app.route('/auth/login', methods=['POST', 'GET'])
 def login_logic():
     if not request.is_json: return jsonify({"message": "Requisição deve ser JSON"}), 400
     data = request.get_json()
@@ -329,4 +329,4 @@ def get_summary():
 
 # --- Ponto de Partida ---
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5001)

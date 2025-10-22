@@ -5,7 +5,7 @@ services:
     build: .
     container_name: gerenciador_financeiro_web
     ports:
-      - "5001:8000"
+      - "5001:5001"
     volumes:
       - ./instance:/app/instance
     env_file:
